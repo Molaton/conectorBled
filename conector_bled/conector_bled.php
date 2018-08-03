@@ -421,6 +421,7 @@ class conector_bled extends Module{
                         $combinations = $productObj->getAttributeCombinations((int)Configuration::get('conector_lang'));
                         foreach ($combinations as $combination) {
                             $this->actualizarStockCombinacion($product['id_product'], $combination['quantity'], $combination['id_product_attribute']);
+                            sleep(1);
                         }
                     } else {
                         $quantity = StockAvailable::getQuantityAvailableByProduct($product['id_product']);
@@ -430,6 +431,7 @@ class conector_bled extends Module{
                     $this->log_mensaje("Error> " . $e->getMessage() . "\nError_product_id> " . $product['id_product']);
                     return false;
                 }
+                sleep(1);
             }
         }
         return true;
@@ -473,6 +475,7 @@ class conector_bled extends Module{
                     $this->log_mensaje("Error> " . $e->getMessage() . "\nError_product_id> " . $product['id_product']);
                     return false;
                 }
+                sleep(1);
             }
         }
         return true;
@@ -541,7 +544,7 @@ class conector_bled extends Module{
             $resources->quantity = $quantity;
             $opt['putXml'] = $xml->asXML();
             $xml = $ws->edit($opt);
-            Db::getInstance()->update('conector_bled_attributes', array('quantity' => $quantity), 'id_product_attribute='.$id_attribute );
+            Db::getInstance()->update('conector_bled_product_attributes', array('quantity' => $quantity), 'id_product_attribute='.$id_attribute );
         } catch (Exception $e ) {
             $this->log_mensaje("Error actualizando stock> " . $e->getMessage());
         } 
@@ -733,6 +736,7 @@ class conector_bled extends Module{
         $productObj = new Product($id_product, true, (int)Configuration::get('conector_lang'));
         $combinaciones = $productObj->getAttributeCombinations((int)Configuration::get('conector_lang'));
         foreach ( $combinaciones as $combinacion ) {
+        	sleep(1);
             $ws = new PrestaShopWebservice( (string)Configuration::get('external_prestashop_url'), (string)Configuration::get('api_key'), false);
             $id_externo = $this->getIdExterno($combinacion['id_product_attribute'], true);
             if ($this->exists($combinacion['id_product_attribute'], 'id_product_attribute', 'product_attributes')){
@@ -762,11 +766,11 @@ class conector_bled extends Module{
 
                     $opt['postXml'] = $xml->asXML();
                     $respuesta = $ws->add($opt);
-                    $resources = $xml->children()->children();
+                    $resources = $respuesta->children()->children();
                     $id_externa = $resources->id;
 
                     $this->insertarEnDb($combinacion['id_product_attribute'], $productObj->reference, $id_externa, true);
-                    $this->log_response("<error>\n\t<mensaje>Éxito añadiendo combinacion: ".$respuesta->asXML()."</mensaje>\n\t<id>".$id_product."</id>\n\t<xml>".$xml->asXML()."</xml>\n</error>","combination_success");
+                    $this->log_response("<error>\n\t<mensaje>Éxito añadiendo combinacion: ".$respuesta->asXML()."</mensaje>\n\t<id>".$combinacion['id_product_attribute']."</id>\n\t<xml>".$xml->asXML()."</xml>\n</error>","combination_success");
                 } catch (Exception $e) {
                     try {
                         $this->log_response("<error>\n\t<mensaje>Error añadiendo combinacion: ".$e->getTraceAsString()."</mensaje>\n\t<id>".$id_product."</id>\n\t<xml>".$xml->asXML()."</xml>\n</error>","combination_failure");
@@ -798,7 +802,7 @@ class conector_bled extends Module{
                     $resources->reference = $combinacion['reference'];
                     $opt['putXml'] = $xml->asXML();
                     $respuesta = $ws->edit($opt);
-                    $this->log_response("<error>\n\t<mensaje>Éxito actualizando combinacion: ".$respuesta->asXML()."</mensaje>\n\t<id>".$id_product."</id>\n\t<xml>".$xml->asXML()."</xml>\n</error>","combination_success");
+                    $this->log_response("<error>\n\t<mensaje>Éxito actualizando combinacion: ".$respuesta->asXML()."</mensaje>\n\t<id>".$combinacion['id_product_attribute']."</id>\n\t<xml>".$xml->asXML()."</xml>\n</error>","combination_success");
                 } catch (Exception $e) {
                     try {
                         $this->log_response("<error>\n\t<mensaje>Error actualizando combinacion: ".$e->getTraceAsString()."</mensaje>\n\t<id>".$id_product."</id>\n\t<xml>".$xml->asXML()."</xml>\n</error>","combination_failure");
@@ -860,7 +864,7 @@ class conector_bled extends Module{
                         if ( !$this->imageExists($imagen['id_image']) ) {
                             try {
                                 $id_externo = $this->subirImagen($imagen['id_image'], $id);
-                                $this->insertarImagenesEnDb($imagen['id_image'], $id_externo);
+                                $this->insertarImagenesEnDb($imagen['id_image'], (int)$id_externo);
                             } catch ( Exception $e ) {
                                 $this->log_mensaje("Error actualizando imagenes del producto> ".$imagen['id_image'].">" . $e->getMessage());
                             }
@@ -893,7 +897,7 @@ class conector_bled extends Module{
                             if (!$this->imageExists($imagen['id_image'])) {
                                 try {
                                     $id_externo = $this->subirImagen($imagen['id_image'], $id_product, true);
-                                    $this->insertarImagenesEnDb($imagen['id_image'], $id_externo);
+                                    $this->insertarImagenesEnDb($imagen['id_image'], (int)$id_externo);
                                 } catch ( Exception $e ) {
                                     $this->log_mensaje("Error actualizando imagenes de la combinación> ".$imagen['id_image'].">" . $e->getMessage());
                                 }
@@ -929,10 +933,6 @@ class conector_bled extends Module{
             curl_setopt($ch, CURLOPT_USERPWD, (string)Configuration::get('api_key').':');
             curl_setopt($ch, CURLOPT_POSTFIELDS, array('image' => $cimage));
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_HEADER, true);
-            curl_setopt($ch, CURLINFO_HEADER_OUT, true);
-            curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
-            curl_setopt($ch, CURLOPT_HTTPHEADER, array('Expect:' ));
             $response = curl_exec($ch);
             $result = $this->parseResponse($response);
             $resources = $result->children()->children();
@@ -944,14 +944,16 @@ class conector_bled extends Module{
     }
 
     public function parseResponse($response) {
-        log_response($response, "res");
-        $index = strpos($response, "\r\n\r\n");
-        if ($index === false && $curl_params[CURLOPT_CUSTOMREQUEST] != 'HEAD')
-            throw new PrestaShopWebserviceException('Bad HTTP response'.(string)$response.$curl_params[CURLOPT_CUSTOMREQUEST]);
-        log_response($response, "respuestasImg");
-        $body = substr($response, $index + 4);
-
-        return parseXML($body);
+        $log_file = fopen($_SERVER['DOCUMENT_ROOT'] . '/modules/conector_bled/logs/imagesp.log',"w");
+        fwrite($log_file, $response);
+        fclose($log_file);
+        $return = '';
+        try {
+        	$return = $this->parseXML($response);
+        } catch ( Exception $e ) {
+        	$this->log_mensaje($e->getMessage());
+        }
+        return $return;
     }
 
     protected function parseXML($response)
@@ -961,12 +963,6 @@ class conector_bled extends Module{
             libxml_clear_errors();
             libxml_use_internal_errors(true);
             $xml = simplexml_load_string($response,'SimpleXMLElement', LIBXML_NOCDATA);
-            if (libxml_get_errors())
-            {
-                $msg = var_export(libxml_get_errors(), true);
-                libxml_clear_errors();
-                throw new PrestaShopWebserviceException('HTTP XML response is not parsable: '.$msg);
-            }
             return $xml;
         }
         else
@@ -1000,7 +996,7 @@ class conector_bled extends Module{
                 $id_externa = $resources->id;
 
                 $this->insertarAtributosEnDb($attribute['id_attribute_group'], $attribute['name'], $id_externa);
-                $this->log_mensaje("Éxito añadiendo atributo> ".$attribute['id_attribute_group'] . ">".$xml->asXML()."ENDXML\n".$respuesta->asXML(), "attribute_success");
+                $this->log_response("Éxito añadiendo atributo> ".$attribute['id_attribute_group'] . ">".$xml->asXML()."ENDXML\n".$respuesta->asXML(), "attribute_success");
             } catch ( Exception $e ) {
                 $this->log_mensaje("Error añadiendo atributo> ".$attribute['id_attribute_group'] . ">".$e->getMessage());
                 $this->log_response("START\n".$xml->asXML()."END","attribute_failure");
@@ -1189,39 +1185,39 @@ class conector_bled extends Module{
         return (Db::getInstance()->execute('
         CREATE TABLE IF NOT EXISTS`'._DB_PREFIX_.'conector_bled_products`( 
             `id_product` INT(10) UNSIGNED NOT NULL PRIMARY KEY,
-            `reference` VARCHAR(128) NOT NULL,
+            `reference` VARCHAR(128),
             `id_product_ext` INT(10) UNSIGNED NOT NULL,
             `quantity` INT(10) UNSIGNED DEFAULT 0)
             DEFAULT CHARSET=utf8;')
         && Db::getInstance()->execute('
         CREATE TABLE IF NOT EXISTS`'._DB_PREFIX_.'conector_bled_product_attributes`(
             `id_product_attribute` INT(10) UNSIGNED NOT NULL PRIMARY KEY,
-            `reference` VARCHAR(128) NOT NULL,
+            `reference` VARCHAR(128),
             `id_product_attribute_ext` INT(10) UNSIGNED NOT NULL,
             `quantity` INT(10) UNSIGNED DEFAULT 0 )
             DEFAULT CHARSET=utf8;')
         && Db::getInstance()->execute('
         CREATE TABLE IF NOT EXISTS`'._DB_PREFIX_.'conector_bled_attributes`(
             `id_attribute` INT(10) UNSIGNED NOT NULL PRIMARY KEY,
-            `name` VARCHAR(128) NOT NULL,
+            `name` VARCHAR(128),
             `id_attribute_ext` INT(10) UNSIGNED NOT NULL)
             DEFAULT CHARSET=utf8;')
         && Db::getInstance()->execute('
         CREATE TABLE IF NOT EXISTS`'._DB_PREFIX_.'conector_bled_attribute_values`(
             `id_attribute_value` INT(10) UNSIGNED NOT NULL PRIMARY KEY,
-            `value` VARCHAR(128) NOT NULL,
+            `value` VARCHAR(128),
             `id_attribute_value_ext` INT(10) UNSIGNED NOT NULL)
             DEFAULT CHARSET=utf8;')
         && Db::getInstance()->execute('
         CREATE TABLE IF NOT EXISTS`'._DB_PREFIX_.'conector_bled_features`(
             `id_feature` INT(10) UNSIGNED NOT NULL PRIMARY KEY,
-            `name` VARCHAR(128) NOT NULL,
+            `name` VARCHAR(128),
             `id_feature_ext` INT(10) UNSIGNED NOT NULL)
             DEFAULT CHARSET=utf8;')
         && Db::getInstance()->execute('
         CREATE TABLE IF NOT EXISTS`'._DB_PREFIX_.'conector_bled_feature_values`(
             `id_feature_value` INT(10) UNSIGNED NOT NULL PRIMARY KEY,
-            `value` VARCHAR(128) NOT NULL,
+            `value` VARCHAR(128),
             `id_feature_value_ext` INT(10) UNSIGNED NOT NULL)
             DEFAULT CHARSET=utf8;')
         && Db::getInstance()->execute('
@@ -1415,7 +1411,7 @@ class conector_bled extends Module{
     public function insertarImagenesEnDb($id_imagen,$id_imagen_ext) {
         try {
             Db::getInstance()->execute('
-                INSERT INTO `'._DB_PREFIX_.'conector_bled_images` (`id_image`)
+                INSERT INTO `'._DB_PREFIX_.'conector_bled_images` (`id_image`,`id_image_ext`)
                 VALUES('.$id_imagen.','.$id_imagen_ext.');'
             );
             return true;
@@ -1443,7 +1439,7 @@ class conector_bled extends Module{
 
     public function getIdExterno($id_local, $combination = false) {
         if ( $combination ) {
-            $table = 'conector_bled_attributes';
+            $table = 'conector_bled_product_attributes';
             $column = 'id_product_attribute';
         } else {
             $table = 'conector_bled_products';
@@ -1534,6 +1530,9 @@ class conector_bled extends Module{
             'conector_bled',
             'product_succes',
             'product_failure',
+            'combination_success',
+            'attribute_failure',
+            'attribute_success',
             'xmls');
         foreach ($logs as $log) {
             $log_url = $log_folder . $log . '.log';
@@ -1595,22 +1594,22 @@ class conector_bled extends Module{
             foreach ( $objetos as $objeto => $valor ) {
                 $xml = $ws->get(array('url' => (string) Configuration::get('external_prestashop_url').'/api/'.$objeto));
                 $resources = $xml->children();
-                $objs = xml2array($resources->asXML());
+                $objs = $this->xml2array($resources->asXML());
                 foreach ( $objs as $obj ) {
                     if ( !$this->exists($obj, 'id_'.$valor.'_ext', $valor.'s') ) {
                         try {
-                            $opt = array( 'resources' => $objeto );
-                            $opt['id'] = $obj;
+                            $opt = array( 'resource' => $objeto );
+                            $opt['id'] = (int)$obj;
                             $respuesta = $ws->delete($opt);
                         } catch (Exception $e) {
-
+                        	$this->log_response("id => ".$obj."\nResource =>".$objeto."\nValor =>".$valor."\nERROR=>".$e->getMessage(), "ids_fail");
                         }
                     }
                 }
             }
             
         } catch ( Exception $e ) {
-            $log_mensaje("No se pudo borrar la basura");
+            $this->log_mensaje("No se pudo borrar la basura");
         }
     }
 
@@ -1763,7 +1762,7 @@ class conector_bled extends Module{
 
     function xml2array($fname){
       $sxi = new SimpleXmlIterator($fname);
-      return sxiToArray($sxi);
+      return $this->sxiToArray($sxi);
     }
 
     function sxiToArray($sxi){
