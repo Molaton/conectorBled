@@ -572,20 +572,23 @@ class conector_bled extends Module{
                 $resources->id_shop_default = 1;
                 $resources->name->language[0] = $productObj->name;
                 $resources->description->language[0] = $productObj->description;
-                if ( empty($productObj->price) ) {
+                if ( empty($productObj->getPrice(false, false)) ) {
                     $resources->price = 0.00;
                 } else {
-                    $resources->price = $productObj->price;
+                    $resources->price = $productObj->getPrice(false, false);
                 }
                 $resources->ean13 = $productObj->ean13;
                 $resources->description_short->language[0] = $productObj->description_short;
                 $resources->meta_description->language[0] = $productObj->meta_description;
                 $resources->meta_keywords->language[0] = $productObj->meta_keywords;
                 $resources->meta_title->language[0] = $productObj->meta_title;
-                if ( $productObj->price > 0 && $productObj->active == 1) {
+                if ( $productObj->active == 1 && $productObj->price > 0) {
                     $resources->active = $productObj->active;
                 } else {
                     $resources->active = 0;
+                }
+                if ( $productObj->available_for_order ) {
+                    $resources->available_for_order = 1;
                 }
                 $resources->state = 1;
                 $resources->id_tax_rules_group = 53;
@@ -662,10 +665,10 @@ class conector_bled extends Module{
                 $resources->id_shop_default = 1;
                 $resources->name->language[0] = $productObj->name;
                 $resources->description->language[0] = $productObj->description;
-                if ( empty($productObj->price) ) {
+                if ( empty($productObj->getPrice(false,false)) ) {
                     $resources->price = 0.00;
                 } else {
-                    $resources->price = $productObj->price;
+                    $resources->price = $productObj->getPrice(false,false);
                 }
                 $resources->ean13 = $productObj->ean13;
                 $resources->description_short->language[0] = $productObj->description_short;
@@ -673,13 +676,15 @@ class conector_bled extends Module{
                 $resources->meta_keywords->language[0] = $productObj->meta_keywords;
                 $resources->meta_title->language[0] = $productObj->meta_title;
                 $resources->state = 1;
-                if ( $productObj->price > 0 && $productObj->active == 1 ) {
+                if ( $productObj->active == 1 && $productObj->price > 0 ) {
                     $resources->active = $productObj->active;
                 } else {
                     $resources->active = 0;
                 }
                 $resources->reference = $productObj->reference;
-
+                if ( $productObj->available_for_order ) {
+                    $resources->available_for_order = 1;
+                }
                 $image_xml = 
                             "<image>
                                 <id></id>
